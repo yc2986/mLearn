@@ -1,2 +1,2 @@
 # DeepLearning
-# Eigen Based Machine Learning Library
+Eigen Based Machine Learning Library
