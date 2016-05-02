@@ -17,17 +17,14 @@ VectorXf stdev(MatrixXf mat) {
 }
 
 int main() {
-	MatrixXf a(3, 2);
-	a << 1, 2,
-		 3, 4,
-		 5, 6;
-	MatrixXf b = a.rowwise() - a.colwise().mean();
-	VectorXf c = stdev(a);
-	cout << c << endl;
-	b = b.array().rowwise() / c.transpose().array();
-	cout << b << endl;
-	//a.middleCols(0, 2).middleRows(1, 2) = b;
-	//mat.conservativeResize(mat.rows() + 1, NoChange);
-	//mat.row(mat.rows() - 1) = VectorXf::Ones(4);
+	MatrixXf a(4, 2);
+	VectorXf b(2);
+	a << 1, 5,
+		 2, 6,
+		 3, 7,
+		 4, 8;
+	b = a.colwise().mean();
+	a.rowwise() -= b.transpose();
+	cout << a << endl;
 	return 0;
 }

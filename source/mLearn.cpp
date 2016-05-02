@@ -1,5 +1,5 @@
 #include <iostream>
-#include <chrono>
+#include <utility>
 #include "Eigen/Dense"
 #include "model.h"
 
@@ -9,19 +9,15 @@ using namespace Eigen;
 int main() {
 	float alpha;
 	int iter;
+	MatrixXf score(1, 3);
+	score << 1, 45, 85;
 	cout << "Please input the learning rate and iteration time!" << endl;
 	cin >> alpha >> iter;
-	vector<int> psize = {1, 1};
-	model foo(psize);
-	MatrixXf temp = foo.read("model/ex1data2.txt");
-	foo.save("model/out2.csv", temp);
-	foo.initialize("model/out2.csv", "binary");
-	auto start = chrono::high_resolution_clock::now();
-	foo.featureNormalize();
-	foo.LinearRegression(alpha, iter);
-	foo.getCost();
-	auto dur = chrono::high_resolution_clock::now() - start;
-	auto ms = chrono::duration_cast<chrono::milliseconds>(dur).count();
-	cout << ms << "ms" << endl;
+	model foo("model/ex2data1.txt", "text");
+	foo.timer("start");
+	foo.LogisticRegression(alpha, iter, 0.0, true);
+	foo.getTheta();
+	foo.predict(score, true);
+	foo.timer("stop");
 	return 0;
 }
