@@ -155,23 +155,46 @@ void model::featureNormalize(MatrixXf &mat) {
 void model::LinearRegression(const float &alpha, const int &iter, const float &lambda, const bool &useFeatureNormalize) {
 	if (useFeatureNormalize)
 		featureNormalize(x);
-	// Training set size
-	int m = x.rows();
-	// Hypothesis - y
-	MatrixXf temp;
-	// Linear regression
-	for (int i = 0; i < iter; i++) {
-		temp = x * theta - y;
-		// Cost function
-		cost.push_back((temp.array().square()).sum() / (2 * m));
-		// Update weigth
-		theta.noalias() -= (alpha / m) * (x.adjoint() * temp);
-	}
+	gradientDescent(alpha, iter, lambda, "Linear");
 }
 
 void model::LogisticRegression(const float &alpha, const int &iter, const float &lambda, const bool &useFeatureNormalize) {
 	if (useFeatureNormalize)
 		featureNormalize(x);
+	// Gradient Descent Solver
+	//gradientDescent(alpha, iter, lambda, "Logistic");
+	BFGS(iter, lambda);
+}
+
+MatrixXf model::sigmoid(const MatrixXf &z) {
+	return (1 / (1 + (-z).array().exp()));
+}
+
+/* Solver */
+MatrixXf model::gradientLinear(const float &alpha, const float &lambda) {
+	// Training set size
+	int m = x.rows();
+	// Feature size
+	int n = theta.rows();
+	// Regularization term
+	float reg = 0;
+	// Hypothesis
+	MatrixXf h = x * theta - y;
+	// Gradient, same size as theta
+	MatrixXf grad = x.adjoint() * h / m;
+	// Cost function
+	if (lambda != 0.0)	// Need to be verified
+		reg = (2 * lambda / m) * (theta.bottomRows(n - 1).adjoint() * theta.bottomRows(n - 1)).array().sum();
+	// Cost function
+	cost.push_back(reg + (h.array().square()).sum() / (2 * m));
+	if (lambda != 0.0)
+		grad.bottomRows(n - 1).noalias() += lambda * theta.bottomRows(n - 1) / m;
+	
+	theta.noalias() -= alpha * grad;
+	return grad;
+}
+
+MatrixXf model::gradientLogistic(const float &alpha, const float &lambda) {
 	// Training set size
 	int m = x.rows();
 	// Feature size
@@ -180,31 +203,84 @@ void model::LogisticRegression(const float &alpha, const int &iter, const float 
 	float reg = 0;
 	// Hypothesis
 	MatrixXf h;
-	// Gradient
-	MatrixXf grad(theta.rows(), theta.cols());
-	// Data holder
+	// Gradient, same size as theta
+	MatrixXf grad;
+	// Data Holder
 	MatrixXf H(2 * m, theta.cols()), Y(2 * m, y.cols());
-	// Logistic regression
+	// Calculating cost
+	h = sigmoid(x * theta);
+	H << -h.array().log(),
+		 -(1 - h.array()).array().log();
+
+	h.noalias() -= y;
+
+	Y << y,
+		 1 - y.array();
+	// Cost function
+	if (lambda != 0.0)
+		reg = (2 * lambda / m) * (theta.bottomRows(n - 1).adjoint() * theta.bottomRows(n - 1)).array().sum();
+	
+	cost.push_back(reg + (H.adjoint() * Y / m).array().sum());
+	
+	grad = x.adjoint() * h / m;
+
+	if (lambda != 0.0)
+		grad.bottomRows(n - 1).noalias() += lambda * theta.bottomRows(n - 1) / m;
+
+	theta.noalias() -= alpha * grad;
+	return grad;
+}
+
+void model::gradientDescent(const float &alpha, const int &iter, const float &lambda, const char *mode) {
+	// Regression loop
 	for (int i = 0; i < iter; i++) {
-		h = sigmoid(x * theta);
-		H << -h.array().log(),
-			 -(1 - h.array()).array().log();
-		Y << y,
-			 1 - y.array();
-		// Cost function
-		if (lambda == 0.0)
-			reg = (2 * lambda / m) * (theta.bottomRows(n - 1).adjoint() * theta.bottomRows(n - 1)).array().sum();
-		cost.push_back(reg + (H.adjoint() * Y / m).array().sum());
-		// Update weigth
-		grad = x.adjoint() * (h - y) / m;
-		if (lambda == 0.0)
-			grad.bottomRows(n - 1).noalias() += lambda * theta.bottomRows(n - 1) / m;
-		theta.noalias() -= alpha * grad;
+		if (!strcmp(mode, "Logistic"))
+			(void)gradientLogistic(alpha, lambda);
+
+		else if (!strcmp(mode, "Linear"))
+			(void)gradientLinear(alpha, lambda);
 	}
 }
 
-MatrixXf model::sigmoid(const MatrixXf &z) {
-	return (1 / (1 + (-z).array().exp()));
+void model::BFGS(const int &maxiter, const float &lambda) {
+	// Feature size
+	int n = theta.rows();
+	// Alpha
+	float alpha = 15;
+	// Hessian Matrix
+	MatrixXf Hessian = MatrixXf::Identity(n, n);
+	// Step difference
+	MatrixXf s, q;
+	// Initial Step
+	// Define Gradient
+	MatrixXf grad, grad_new;
+	// Gradient
+	grad = gradientLogistic(alpha, lambda);
+	// Start of BFGS
+	s = Hessian.ldlt().solve(-alpha * grad);	// theta_n+1 - theta_n
+	// Update theta
+	//theta.noalias() += s;
+	// Loop
+	for (int i = 1; i < maxiter; i++) {
+		// Gradient
+		grad_new = gradientLogistic(alpha, lambda);
+		if (cost.rbegin()[1] - cost.rbegin()[0] < 1e-8) {
+			cout << "Early stop criteria met!" << endl;
+			cout << "Loop time: " << i << endl;
+			break;
+		}
+		// Gradient difference between step
+		q = grad_new - grad;
+		//cout << "Grad: " << endl << grad << endl;
+		//cout << "Grad_New: " << endl << grad_new << endl;
+		grad = grad_new;
+		// Calculate Hessian Matrix
+		//cout << "Strictly Positive? " << q.adjoint() * s << endl;
+		Hessian.noalias() += (q * q.adjoint()) / (q.adjoint() * s)(0) - (Hessian * s * s.adjoint() * Hessian) / (s.adjoint() * Hessian * s)(0);
+		s = Hessian.ldlt().solve(-alpha * grad);	// theta_n+1 - theta_n
+		// Update theta
+		//theta.noalias() += s;
+	}
 }
 
 /* Output */
