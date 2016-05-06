@@ -34,6 +34,12 @@ public:
 	void LogisticRegression(const float &alpha, const int &iter, const float &lambda = 0,const bool &useFeatureNormalize = false);
 	MatrixXf sigmoid(const MatrixXf &z);
 
+	/* Solver */
+	MatrixXf gradientLinear(const float &alpha, const float &lambda);
+	MatrixXf gradientLogistic(const float &alpha, const float &lambda);
+	void gradientDescent(const float &alpha, const int &iter, const float &lambda = 0, const char *mode = NULL);
+	void BFGS(const int &maxiter, const float &lambda = 0);
+
 	/* Output */
 	void predict(MatrixXf &mat, const bool &useFeatureNormalize = false);
 
