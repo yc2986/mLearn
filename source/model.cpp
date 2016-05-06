@@ -247,6 +247,8 @@ void model::BFGS(const int &maxiter, const float &lambda) {
 	int n = theta.rows();
 	// Alpha
 	float alpha = 15;
+	// Output and Output update
+	MatrixXf Fc, Fc_new, df, d;
 	// Hessian Matrix
 	MatrixXf Hessian = MatrixXf::Identity(n, n);
 	// Step difference
@@ -259,14 +261,26 @@ void model::BFGS(const int &maxiter, const float &lambda) {
 	// Start of BFGS
 	s = Hessian.ldlt().solve(-alpha * grad);	// theta_n+1 - theta_n
 	// Update theta
-	//theta.noalias() += s;
+	// Get current function output
+	Fc = sigmoid(x * theta);
+	d  = -Hessian * grad;
+	df = grad.adjoint() * d;
+	Fc_new = sigmoid(x * (theta + d));
+	// Line search
+	while ((Fc_new.array() > (Fc + alpha * df).array()).any()) {
+		alpha *= 0.7; 
+		Fc_new = sigmoid(x * (theta + alpha * d));
+		//cout << "alpha: " << alpha << endl;
+	}
 	// Loop
 	for (int i = 1; i < maxiter; i++) {
+		cout << "alpha: " << alpha << endl;
 		// Gradient
 		grad_new = gradientLogistic(alpha, lambda);
 		if (cost.rbegin()[1] - cost.rbegin()[0] < 1e-8) {
 			cout << "Early stop criteria met!" << endl;
 			cout << "Loop time: " << i << endl;
+			cout << (cost.rbegin()[1] - cost.rbegin()[0]) << endl;
 			break;
 		}
 		// Gradient difference between step
@@ -278,8 +292,18 @@ void model::BFGS(const int &maxiter, const float &lambda) {
 		//cout << "Strictly Positive? " << q.adjoint() * s << endl;
 		Hessian.noalias() += (q * q.adjoint()) / (q.adjoint() * s)(0) - (Hessian * s * s.adjoint() * Hessian) / (s.adjoint() * Hessian * s)(0);
 		s = Hessian.ldlt().solve(-alpha * grad);	// theta_n+1 - theta_n
-		// Update theta
-		//theta.noalias() += s;
+		// Line search
+		alpha = 15;
+		Fc = sigmoid(x * theta);
+		d  = -Hessian * grad;
+		df = grad.adjoint() * d;
+		Fc_new = sigmoid(x * (theta + d));
+		while ((Fc_new.array() > (Fc + alpha * df).array()).any()) {
+			alpha *= 0.7; 
+			Fc_new = sigmoid(x * (theta + alpha * d));
+		}
+
+		// End of line search
 	}
 }
 
