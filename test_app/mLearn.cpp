@@ -15,8 +15,8 @@ int main() {
 	cin >> alpha >> iter;
 	model foo("model/ex2data1.txt", "text");
 	foo.timer("start");
-	foo.LogisticRegression(alpha, iter, 0.0, true);
-	foo.getTheta();
+	foo.LogisticRegression(alpha, iter, 0, true);
+	foo.getCost();
 	foo.predict(score, true);
 	foo.timer("stop");
 	return 0;
