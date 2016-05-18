@@ -247,6 +247,11 @@ void model::BFGS(const int &maxiter, const float &lambda) {
 	int n = theta.rows();
 	// Alpha
 	float alpha = 15;
+<<<<<<< HEAD
+=======
+	// Output and Output update
+	MatrixXf Fc, Fc_new, df, d;
+>>>>>>> 94c80b15fd61ddbdfe80b47587ec7ee858df16cd
 	// Hessian Matrix
 	MatrixXf Hessian = MatrixXf::Identity(n, n);
 	// Step difference
@@ -259,6 +264,7 @@ void model::BFGS(const int &maxiter, const float &lambda) {
 	// Start of BFGS
 	s = Hessian.ldlt().solve(-alpha * grad);	// theta_n+1 - theta_n
 	// Update theta
+<<<<<<< HEAD
 	//theta.noalias() += s;
 	// Loop
 	for (int i = 1; i < maxiter; i++) {
@@ -268,6 +274,28 @@ void model::BFGS(const int &maxiter, const float &lambda) {
 		if (cost.rbegin()[1] - cost.rbegin()[0] < 1e-8) {
 			cout << "Early stop criteria met!" << endl;
 			cout << "Loop time: " << i << endl;
+=======
+	// Get current function output
+	Fc = sigmoid(x * theta);
+	d  = -Hessian * grad;
+	df = grad.adjoint() * d;
+	Fc_new = sigmoid(x * (theta + d));
+	// Line search
+	while ((Fc_new.array() > (Fc + alpha * df).array()).any()) {
+		alpha *= 0.7; 
+		Fc_new = sigmoid(x * (theta + alpha * d));
+		//cout << "alpha: " << alpha << endl;
+	}
+	// Loop
+	for (int i = 1; i < maxiter; i++) {
+		cout << "alpha: " << alpha << endl;
+		// Gradient
+		grad_new = gradientLogistic(alpha, lambda);
+		if (cost.rbegin()[1] - cost.rbegin()[0] < 1e-8) {
+			cout << "Early stop criteria met!" << endl;
+			cout << "Loop time: " << i << endl;
+			cout << (cost.rbegin()[1] - cost.rbegin()[0]) << endl;
+>>>>>>> 94c80b15fd61ddbdfe80b47587ec7ee858df16cd
 			break;
 		}
 		// Gradient difference between step
@@ -279,8 +307,23 @@ void model::BFGS(const int &maxiter, const float &lambda) {
 		//cout << "Strictly Positive? " << q.adjoint() * s << endl;
 		Hessian.noalias() += (q * q.adjoint()) / (q.adjoint() * s)(0) - (Hessian * s * s.adjoint() * Hessian) / (s.adjoint() * Hessian * s)(0);
 		s = Hessian.ldlt().solve(-alpha * grad);	// theta_n+1 - theta_n
+<<<<<<< HEAD
 		// Update theta
 		//theta.noalias() += s;
+=======
+		// Line search
+		alpha = 15;
+		Fc = sigmoid(x * theta);
+		d  = -Hessian * grad;
+		df = grad.adjoint() * d;
+		Fc_new = sigmoid(x * (theta + d));
+		while ((Fc_new.array() > (Fc + alpha * df).array()).any()) {
+			alpha *= 0.7; 
+			Fc_new = sigmoid(x * (theta + alpha * d));
+		}
+
+		// End of line search
+>>>>>>> 94c80b15fd61ddbdfe80b47587ec7ee858df16cd
 	}
 }
 
